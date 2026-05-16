@@ -10,11 +10,12 @@ export ETC
 
 ## Defaults: override at command line, e.g. make tree O=cars.csv
 DATA ?= $(GIT_ROOT)/data
+SRC  ?= $(GIT_ROOT)/src
 O    ?= $(DATA)/auto93.csv    # optimization file
 C    ?= $(DATA)/diabetes.csv  # classification file
 
-LULL  := lua lull.lua
-NB    := lua nb.lua
+LULL  := lua $(SRC)/lull.lua
+NB    := lua $(SRC)/nb.lua
 Chars ?= 70
 
 .PHONY: help the tree atree active check nb diabetes soybeans heart ncheck push sh
