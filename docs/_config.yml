@@ -1,0 +1,14 @@
+decription: "A little learning library in Lua."
+title: "LULL"
+
+# CRITICAL: Replace 'your-repository-name' with your actual repo name
+baseurl: "/lull" 
+
+remote_theme: just-the-docs/just-the-docs
+
+plugins:
+  - jekyll-remote-theme
+  - jekyll-seo-tag
+
+search_enabled: true
+
