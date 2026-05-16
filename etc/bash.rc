@@ -1,0 +1,21 @@
+# etc/bash.rc -- shell init for `make sh` (banner printed by Makefile)
+: "${GIT_ROOT:=$(git rev-parse --show-toplevel 2>/dev/null)}"
+: "${ETC:=$GIT_ROOT/etc}"
+: "${DATA:=$GIT_ROOT/data}"
+export GIT_ROOT ETC DATA
+
+alias ls='ls --color'
+alias grep='grep --color=auto'
+alias blat='bat -l lua --theme="Nord"'
+alias vi='nvim -u "$ETC/nvim.lua"'
+
+export PATH="$GIT_ROOT:$PATH"
+export EDITOR=nano
+export HISTSIZE=10000
+export HISTFILESIZE=20000
+
+bold=$(tput bold); col0=$(tput sgr0)
+col1=$(tput setaf 6); col2=$(tput setaf 3)
+branch() { git branch 2>/dev/null | awk '/^\*/ {print $2}'; }
+dirty()  { [[ -n $(git status -s 2>/dev/null) ]] && echo "*"; }
+PROMPT_COMMAND='PS1="🦉\[${bold}${col1}\]$(basename "$(dirname "$PWD")")/$(basename "$PWD")\[${col0}\] \[${col2}\]$(branch)$(dirty)\[${col0}\] ▶ "'
