@@ -104,17 +104,20 @@ CLS    := \033[H\033[2J\033[3J
 
 sh: ## launch dev shell (banner + aliases + nvim)
 	@printf "$(CLS)$(YELLOW)\n"
-	@printf '          ___\n'
-	@printf '       ,-"   "-.        ┌─────────────────────┐\n'
-	@printf '      /  o   o  \\       │   l u l l           │\n'
-	@printf '     |   .---.   |      │   learn by doing.   │\n'
-	@printf '     |  ( ___ )  |      │   teach by lua.     │\n'
-	@printf "      \\\\  '---'  /       └─────────────────────┘\n"
-	@printf '       \`-.___.-\`\n'
-	@printf '        / | | \\\n'
-	@printf '       ~~~~~~~~~\n'
-	@printf "$(CYAN)\n  'I hear and I forget."
-	@printf "\n   I see and I remember."
-	@printf "\n   I do and I understand.'   -- Confucius\n"
+	@printf '        .      *           .                  *\n'
+	@printf '           *        .         .       *\n'
+	@printf '     *  .       _____               .       *\n'
+	@printf '              ╱╲    ╲_____                    .\n'
+	@printf '   .         ╱  ╲___      ╲_____              \n'
+	@printf '            ╱       ╲___       ╲_____    *    \n'
+	@printf '     *     ╱_____________╲___________╲       .\n'
+	@printf '                        ╱   ╱                  \n'
+	@printf '      .                ╱   ╱      *            \n'
+	@printf '                      ╱   ╱             *      \n'
+	@printf '             *       ╱ ╱     l u l l          .\n'
+	@printf '                    ╱╱      learn. fly.        \n'
+	@printf "$(CYAN)\n  'Once you have tasted flight, you will"
+	@printf "\n   forever walk the earth with your eyes"
+	@printf "\n   turned skyward.'   -- Leonardo da Vinci\n"
 	@printf "$(DIM)\n   data: $(DATA)\n   etc:  $(ETC)\n$(RESET)\n"
 	@GIT_ROOT=$(GIT_ROOT) ETC=$(ETC) DATA=$(DATA) bash --init-file $(ETC)/bash.rc -i

@@ -1,8 +1,9 @@
-decription: "A little learning library in Lua."
+description: "A little learning library in Lua."
 title: "LULL"
+logo: "/img/banner.png"
 
 # CRITICAL: Replace 'your-repository-name' with your actual repo name
-baseurl: "/lull" 
+baseurl: "/lull"
 
 remote_theme: just-the-docs/just-the-docs
 

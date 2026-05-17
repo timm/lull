@@ -156,8 +156,40 @@ AI / domain identifiers:
   function mink(vs,    err,n)
   ```
 
-* **Section headers:** `-- ## Classes`, `-- ## Update`, `-- ## Query`,
-  `-- ## Tree`, `-- ## Stats`, `-- ## CLI`, `-- ## Examples`, `-- ## Main`.
+* **Section headers:** small ASCII figlets via `figlet -f mini WORD`, each
+  line prefixed with `-- `, followed by a blank `--` line, then the section's
+  first description comment. Words: `OO`, `Tables`, `I/O`, `Math`, `Random`,
+  `Prob`, `Stats`, `CLI`, `Runner`, `Examples`, `Main` (or whatever applies).
+  Example:
+
+  ```
+  -- ___
+  --  | _.|_ | _  _
+  --  |(_||_)|(/__>
+  --
+  -- Append x; return x.
+  function lib.push(t, x) ...
+  ```
+
+* **Print columns (form feed):** insert an ASCII form feed (`\f`, 0x0C) on
+  its own line before *some* section headers so the file prints as columns of
+  roughly 100 lines each. Lua treats `\f` as whitespace; printers (and a2ps)
+  treat it as a page break. Don't put one before every section — just enough
+  to break the file into ~5–7 columns. `local lib = {}` and the file's help
+  string live in column 1 (before the first form feed).
+
+  Insert with a one-line python: each `\x0c` is on its own line, before the
+  target figlet header.
+
+  ```bash
+  python3 -c '
+  s = open("FILE.lua").read()
+  s = s.replace("\n-- HEADER_FIRST_LINE",
+                "\n\x0c\n-- HEADER_FIRST_LINE")
+  open("FILE.lua","w").write(s)'
+  ```
+
+  As a sanity check, `grep -nP "^\x0c" FILE.lua` lists every break.
 
 * **Comments:** before any function, one blank line, then one `--` line, then
   the function. No multi-line docstrings inside functions.
@@ -272,12 +304,14 @@ Train/test orchestration lives **outside** the Lua code, in `Makefile`.
 
 ### Seeding
 
-Be careful. `math.randomseed(the.seed)` per action makes a single run
-reproducible, but if your Makefile invokes the same action N times without
-varying the seed, you get **the same answer N times** — useless for statistics.
-Either vary the seed across repeats (`-s seed=$$RANDOM`, or fold index) or seed
-once at the start and let the noise compound across repeats. Pick one per
-experiment and document it in the Makefile target.
+`lib.run` reseeds via `lib.srand(the.seed)` before each eg — the Park-Miller
+PRNG in `lib` is platform- and version-stable, so the same seed produces the
+same sequence everywhere.
+
+Careful: if your Makefile invokes the same action N times without varying the
+seed, you get **the same answer N times** — useless for statistics. In bash
+xargs loops, pass `-s $$RANDOM` so each spawn gets a fresh seed and the run is
+still reproducible (bash will dump the seed into the log line if you echo it).
 
 ## SSOT / CLI
 
@@ -287,35 +321,64 @@ Config lives in one `help` string parsed at startup. Format per line:
   -k key=default   description
 ```
 
-`cli(the, help)` populates `the` from defaults, then overrides via `-k VAL` on
-the command line.
+Two functions: `options` (always-on, builds `the` from the defaults so the
+config is populated even when the file is `require`'d) and `cli` (script-only,
+applies `-k VAL` overrides from `arg`).
+
+```lua
+local the = lib.options(help)        -- always
+...
+if (arg[0] or ""):match"APP%.lua" then
+  lib.cli(the)                       -- overrides only when main
+  lib.run(the, eg)
+  lib.rogues(b4) end
+```
 
 ## `eg` standards
 
-Each app maintains a table `eg = {}` of named callbacks keyed by `--flag`.
-Rules:
+Every source file — `lib`, `lull`, and each app — maintains a table `eg = {}`
+of named callbacks keyed by `--flag`. Rules:
 
-* **Callable two ways.** From the CLI as `lua APP.lua --foo`, and also directly
-  in Lua (`require"APP".eg["--foo"]()`) for in-process composition.
-* **One job each.** An eg either tests something (asserts) or demonstrates
-  something (prints). Don't mix.
-* **Tests assert.** A test eg uses `eq(actual, expected, "msg")` at least once.
-  Name with `--testXxx`. Failure errors loudly; success silently bumps
-  `_asserts`.
-* **Demos print.** A demo eg prints (usually one line, see the app output
-  convention). Name with `--xxx` (no `test` prefix).
+* **Name = what it exercises**, no prefix. `--stat`, `--hist`, `--num`,
+  `--data`, `--nb`. No `--testXxx`. If the name is the subject, the eg is
+  obviously testing or demoing that subject — the prefix added nothing.
+* **Bundle related checks.** One eg covers a *subject* (a single section in
+  the file, or one logical building block), not a single assertion. Stuff
+  many `eq(...)` calls into one eg. For example `lib.lua --stat` covers
+  `welford`, `summary`, `mode`, and `entropy` in one go (5 asserts):
+
+  ```lua
+  eg["--stat"] = function(    xs,mu,sd)
+    xs = {1,2,3,4,5}
+    mu, sd = lib.summary(xs)
+    eq(mu, 3, "summary mu")
+    eq(math.floor(sd*100), 158, "summary sd")
+    eq(lib.mode({a=3,b=2,c=1}), "a", "mode")
+    eq(lib.entropy({a=1,b=1}), 1, "entropy uniform binary")
+    eq(lib.entropy({a=3,b=0,c=0}), 0, "entropy deterministic")
+    end
+  ```
+
+  Each `eq` carries its own `msg` so a failure tells you which check broke.
+* **Callable two ways.** From the CLI as `lua FILE.lua --foo`, and also
+  directly in Lua (`require"FILE".eg["--foo"]()`) for in-process composition.
+* **Assert when you can.** Use `eq(actual, expected, "msg")` for anything
+  with a known answer. Demos that just print are fine when there's nothing
+  meaningful to assert (e.g. a histogram render); prefer at least one `eq` if
+  possible.
 * **Reads `the`.** Egs pull inputs from the shared config table — `the.f` for
   the data file, `the.seed` for the seed, etc. They take no positional args.
-* **Minimal output.** One line for a demo, nothing for a passing test. No
-  banners, no decorative headers — that's the experiment Makefile's job.
+* **Minimal output.** Silent on success when possible. One line for a demo.
+  No banners, no decorative headers — that's the experiment Makefile's job.
 * **Fast.** A single eg must finish in under a second on a typical laptop.
   Heavy benchmarks belong in a Makefile target that orchestrates many short
   runs, not inside an eg.
 * **Reproducible in isolation.** Each eg is re-runnable by name from the CLI
   and must give the same answer for the same `the.seed`.
-* **`--all` runs everything.** Defined once per app: iterates the keys of `eg`
-  (excluding `--all` itself), reseeds, runs, then prints
-  `asserts passed: N`.
+* **`--all` runs everything.** Defined once per file: iterates the keys of
+  `eg` (excluding `--all` itself), reseeds before each, runs under `xpcall`,
+  then prints `N asserts passed, M failed`. `lib.main` exits with status 1
+  if M > 0 (so Makefiles and CI see failures).
 
 ## File header
 
@@ -324,14 +387,49 @@ Each source file starts with:
 ```lua
 #!/usr/bin/env lua
 -- vim: ft=lua
--- NAME.lua : ONE-LINE DESCRIPTION
 -- (c) 2026, Tim Menzies <timm@ieee.org>, MIT license
-package.path = "./?.lua;" .. package.path
+
+local help = [[
+NAME
+  FILE.lua -- ONE-LINE DESCRIPTION
+
+USAGE
+  lua FILE.lua [-s SEED] [--FLAG ...]
+
+OPTIONS
+  -s seed=1    PRNG seed
+  -h           show help
+
+EGS
+  --foo        what --foo does
+  ...
+
+API
+  Group
+    fn(a,b):t   short description
+    ...
+]]
 ```
 
-Optionally, also at the top: a **terse, Unix-`man`-style multi-line header**
-describing usage, flags, and one-liner examples. This is the only place a
-multi-line comment belongs. Keep it tight — think `man grep`, not a tutorial.
+Rules:
+
+* **Help string is the SSOT.** `lib.options(help)` parses every line that
+  matches `key=value` into `the.key`. Defaults live here and only here.
+* **Terse `man`-style.** NAME / USAGE / OPTIONS / EGS / API. Think `man grep`,
+  not a tutorial. This is the only multi-line comment-like block in the file.
+* **`-h` action prints this string verbatim.** Documentation cannot drift
+  from output.
+* **API section** uses one-line-per-fn with type hints
+  (`push(t,x):x`, `welford(...):n,mu,m2`) plus a short description. Group by
+  the same words as the figlet section headers below in the code (Tables,
+  I/O, Math, Random, Prob, Stats, CLI, OO).
+
+For app files (`nb.lua`, `cbayes.lua`, …), prepend `package.path` so local
+`require"lib"` and `require"lull"` resolve:
+
+```lua
+package.path = "./?.lua;" .. package.path
+```
 
 For `lib.lua`, follow the man-style header with a compact one-line-per-symbol
 function index using the type hints from the naming table. Aim for ~70 chars
@@ -358,35 +456,44 @@ multi-return. Bare verbs (`hist`) return nothing useful.
 
 ## File footer
 
-The bottom of every **app** file (not `lib`) is exactly:
+The bottom of every file (including `lib`, `lull`, every app) is exactly:
 
 ```lua
--- ## Main
-if (arg[0] or ""):match"APP%.lua" then
-  cli(the, help)
-  lib.run(the, eg)
-  lib.rogues(b4) end
+-- Main (figlet header here too)
+if (arg[0] or ""):match"FILE%.lua$" then
+  lib.cli(the); lib.main(the, eg) end
+
+lib.rogues(b4)
+return MODULE   -- whatever this file exports
 ```
 
 Notes:
 
-* `cli` only runs when this file is invoked as a script — not when it's
-  `require`'d from another app or from a test harness.
-* The leak check (`rogues`) runs **after** the CLI dispatch, so any rogue
-  globals leaked while an eg executed are still caught.
-* `b4` is snapshotted at the top of the file, just after `package.path`:
+* `lib.cli` and `lib.main` only run when this file is invoked as a script —
+  not when it's `require`'d from another file. `the` is already populated
+  by `lib.options(help)` further up, so the config is correct in both modes.
+* `lib.main` does everything: reseed via `lib.srand(the.seed)`, run each
+  named eg under `xpcall` (so crashes don't kill the run), print
+  `N asserts passed, M failed`, and `os.exit(1)` if any failed.
+* `lib.rogues(b4)` runs **after** the script block so it catches globals
+  that leaked during eg execution. `b4` is snapshotted just under
+  `package.path`:
 
   ```lua
   local b4 = {}
   for k,_ in pairs(_ENV) do b4[k] = true end
   ```
 
+* If an eg crashes (uncaught error), `lib.main` prints a small traceback
+  "snack" (top ~3 frames) and continues. The crash counts as a failure for
+  the exit-code purpose.
+
 ## Don't
 
 * Don't add error handling for cases that can't happen. Trust internal contracts.
 * Don't write multi-line docstrings inside functions. Use the file header.
 * Don't import one app from another. Promote shared code to `lull` or `lib`.
-* Don't put runtime assertions in hot loops; put them in `eg["--testXxx"]`.
+* Don't put runtime assertions in hot loops; put them in an `eg["--xxx"]`.
 * Don't reach for inheritance. Composition only.
 * Don't sprinkle `local` everywhere. Top-of-file multi-assign block.
 * Don't use `self`. Use `i`.
