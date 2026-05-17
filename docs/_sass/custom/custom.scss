@@ -1,16 +1,18 @@
 // custom overrides for just-the-docs
 // (auto-imported last)
 
-// bigger logo in the side nav
+// bigger logo (theme renders it as a background-image div)
 .site-logo {
+  width: 100% !important;
   height: 80px !important;
   max-height: none !important;
-  width: auto !important;
-  max-width: 100% !important;
   background-size: contain !important;
+  background-repeat: no-repeat !important;
+  background-position: center center !important;
 }
 
-// site-header gives room for taller logo
+// give the header bar room for the taller logo
 .site-header {
+  height: auto !important;
   min-height: 96px !important;
 }
