@@ -1,6 +1,6 @@
 description: "A little learning library in Lua."
 title: "LULL"
-logo: "/img/banner.png"
+logo: "img/banner.png"
 
 # CRITICAL: Replace 'your-repository-name' with your actual repo name
 baseurl: "/lull"
