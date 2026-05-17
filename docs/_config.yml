@@ -15,13 +15,13 @@ plugins:
 
 search_enabled: true
 
-footer_content: "© 2026 Tim Menzies. MIT."
-  gh_edit_link: true
-  gh_edit_link_text: "edit this page"
-  gh_edit_repository: "https://github.com/timm/lull"
-  gh_edit_branch: "main"
-  gh_edit_source: docs
-  gh_edit_view_mode: "tree"  #oopens in github UI
+footer_content: "© 2026 Tim Menzies. MIT license."
+gh_edit_link: true
+gh_edit_link_text: "edit this page"
+gh_edit_repository: "https://github.com/timm/lull"
+gh_edit_branch: "main"
+gh_edit_source: docs
+gh_edit_view_mode: "tree"  # opens in github UI
 
 
 enable_copy_code_button: true
